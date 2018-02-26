@@ -34,7 +34,7 @@ const names = lines.map((line) => line[4]);
     await browser.getTitle();
 
     browser.setValue('.login-email', 'developersworkspace@gmail.com');
-    browser.setValue('.login-password', 'j2FbMUV--KZ&qs?p');
+    browser.setValue('.login-password', '');
 
     await wait(5000);
 
