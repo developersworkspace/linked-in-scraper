@@ -29,7 +29,7 @@ names = names.filter((elem, pos) => {
 
 console.log(`${names.length} unique names.`);
 
-names = names.slice(names.indexOf('Sibylle Pomella') + 1);
+names = names.slice(names.indexOf('Maria Santacoloma') + 1);
 
 (async () => {
     const browser = webdriverio
