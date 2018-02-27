@@ -27,9 +27,13 @@ names = names.filter((elem, pos) => {
     return names.indexOf(elem) == pos;
 });
 
+const factor = 3;
+
 console.log(`${names.length} unique names.`);
 
-names = names.slice(names.indexOf('Suguru Murota') + 1);
+names = names.slice(names.indexOf('Neil Patel') + 1);
+
+console.log(`${names.length} remaining names`);
 
 (async () => {
     const browser = webdriverio
@@ -39,14 +43,14 @@ names = names.slice(names.indexOf('Suguru Murota') + 1);
 
     await browser.getTitle();
 
-    browser.setValue('.login-email', 'tarrantmarlajean@gmail.com');
+    browser.setValue('.login-email', '');
     browser.setValue('.login-password', '');
 
     await wait(5000);
 
     browser.click('.login.submit-button');
 
-    await wait(10000);
+    await wait(10000 * factor);
 
     for (const name of names) {
 
@@ -57,7 +61,7 @@ names = names.slice(names.indexOf('Suguru Murota') + 1);
 
             browser.url(`https://www.linkedin.com/search/results/people/?facetCurrentCompany=%5B%22163718%22%2C%2220210548%22%2C%2227265143%22%5D&keywords=${name}&origin=FACETED_SEARCH`);
 
-            await wait(10000);
+            await wait(10000 * factor);
 
             const linkElements = await browser.elements('.search-entity.search-result .search-result__info .search-result__result-link');
 
@@ -73,7 +77,7 @@ names = names.slice(names.indexOf('Suguru Murota') + 1);
                 try {
                     browser.url(url);
 
-                    await wait(10000);
+                    await wait(10000 * factor);
 
                     const company = await browser.getHTML('.pv-top-card-section__company');
 
