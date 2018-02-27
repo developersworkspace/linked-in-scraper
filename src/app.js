@@ -12,18 +12,24 @@ const logger = winston.createLogger({
     level: 'debug',
     format: winston.format.json(),
     transports: [
-      new winston.transports.Console(),
-      new winston.transports.File({ filename: 'combined.txt' })
+        new winston.transports.Console(),
+        new winston.transports.File({ filename: 'combined.txt' }),
     ],
-  });
+});
 
 const content = fs.readFileSync(path.join(__dirname, '..', 'data.csv'), 'utf8');
 
 const lines = content.split(/\r?\n/).map((line) => line.split(/;(?=(?:(?:[^"]*"){2})*[^"]*$)/)).slice(1);
 
-const names = lines.map((line) => line[4]);
+let names = lines.map((line) => line[4]);
 
-// Chris Petersen
+names = names.filter((elem, pos) => {
+    return names.indexOf(elem) == pos;
+});
+
+console.log(`${names.length} unique names.`);
+
+names = names.slice(names.indexOf('Sakie Matsubara') + 1);
 
 (async () => {
     const browser = webdriverio
@@ -33,7 +39,7 @@ const names = lines.map((line) => line[4]);
 
     await browser.getTitle();
 
-    browser.setValue('.login-email', 'developersworkspace@gmail.com');
+    browser.setValue('.login-email', 'tarrantmarlajean@gmail.com');
     browser.setValue('.login-password', '');
 
     await wait(5000);
@@ -43,53 +49,70 @@ const names = lines.map((line) => line[4]);
     await wait(10000);
 
     for (const name of names) {
-        browser.url(`https://www.linkedin.com/search/results/index/?keywords=${name}&origin=GLOBAL_SEARCH_HEADER`);
 
-        await wait(25000);
-
-        const linkElements = await browser.elements('.search-entity.search-result .search-result__info .search-result__result-link');
-
-        const urls = [];
-
-        for (const linkElement of linkElements.value) {
-            const url = await browser.elementIdAttribute(linkElement.ELEMENT, 'href');
-
-            urls.push(url.value);
-        }
-
-        for (const url of urls) {
-            browser.url(url);
-
-            await wait(25000);
-
-            const company = await browser.getHTML('.pv-top-card-section__company');
-            
-            if (company.indexOf('Euromonitor International') == -1) {
-                logger.warn(`Skipping '${url}' for '${name}'`, {
-                    name,
-                    url,
-                });
-
+        try {
+            if (fs.existsSync(path.join(__dirname, `images/${name.toLowerCase().replace(' ', '-')}.jpg`))) {
                 continue;
             }
 
-            const style = await browser.getAttribute('.pv-top-card-section__photo', 'style');
+            browser.url(`https://www.linkedin.com/search/results/people/?facetCurrentCompany=%5B%22163718%22%2C%2220210548%22%2C%2227265143%22%5D&keywords=${name}&origin=FACETED_SEARCH`);
 
-            const pattern = /background-image: url\("(.*)"\);/;
+            await wait(10000);
 
-            const groups = pattern.exec(style);
+            const linkElements = await browser.elements('.search-entity.search-result .search-result__info .search-result__result-link');
 
-            const profileImageUrl = groups[1];
+            const urls = [];
 
-            logger.info(`Donwloading '${profileImageUrl}' for '${name}'`, {
+            for (const linkElement of linkElements.value) {
+                const url = await browser.elementIdAttribute(linkElement.ELEMENT, 'href');
+
+                urls.push(url.value);
+            }
+
+            for (const url of urls) {
+                try {
+                    browser.url(url);
+
+                    await wait(10000);
+
+                    const company = await browser.getHTML('.pv-top-card-section__company');
+
+                    if (company.indexOf('Euromonitor International') == -1) {
+                        logger.warn(`Skipping '${url}' for '${name}'`, {
+                            name,
+                            url,
+                        });
+
+                        continue;
+                    }
+
+                    const style = await browser.getAttribute('.pv-top-card-section__photo', 'style');
+
+                    const pattern = /background-image: url\("(.*)"\);/;
+
+                    const groups = pattern.exec(style);
+
+                    const profileImageUrl = groups[1];
+
+                    logger.info(`Downloading '${profileImageUrl}' for '${name}'`, {
+                        name,
+                        profileImageUrl,
+                    });
+
+                    await downloadImage(profileImageUrl, path.join(__dirname, `images/${name.toLowerCase().replace(' ', '-')}.jpg`));
+
+                    break;
+
+                } catch (err) {
+                    logger.error(err.message, {
+                        name,
+                    });
+                }
+            }
+        } catch (err) {
+            logger.error(err.message, {
                 name,
-                profileImageUrl,
             });
-
-            await downloadImage(profileImageUrl, path.join(__dirname, `images/${name.toLowerCase().replace(' ', '-')}.jpg`));
-
-            break;
-
         }
     }
 
